@@ -274,6 +274,17 @@
     border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel);color:var(--fg);
     padding:12px;resize:vertical;line-height:1.5}
 
+  .pairpanel{display:flex;flex-direction:column;gap:14px}
+  .pairgrid{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+  .paircard{border:1px solid var(--line);border-radius:var(--r-sm);padding:16px;background:var(--surface)}
+  .paircard.conv{border-top:3px solid var(--accent)}
+  .paircard.div{border-top:3px solid var(--insight)}
+  .paircard .ptag{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase}
+  .paircard.conv .ptag{color:var(--accent)}
+  .paircard.div .ptag{color:var(--insight)}
+  .paircard h3{font-size:16px;margin:6px 0 6px;font-family:var(--body);font-weight:600}
+  .paircard p{font-size:13.5px;color:var(--muted)}
+
   /* author */
   .form{display:grid;gap:14px}
   .field{display:flex;flex-direction:column;gap:5px}
@@ -297,6 +308,7 @@
     .tiles{grid-template-columns:1fr 1fr}
     .row{grid-template-columns:1fr;gap:6px}
     .stim .cell .v{font-size:26px}
+    .pairgrid{grid-template-columns:1fr}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -377,7 +389,7 @@
           <p class=&quot;eyebrow&quot; style=&quot;margin-top:10px&quot;>Your attempts, revealed now</p>
           <div class=&quot;attempts&quot; id=&quot;resAttempts&quot; style=&quot;margin-top:8px&quot;></div>
         </div>
-        <div class=&quot;q&quot;>
+        <div class=&quot;q&quot; id=&quot;qMode&quot;>
           <h3>How did the connection come to you?</h3>
           <div class=&quot;choices&quot; id=&quot;modeChoices&quot;>
             <button class=&quot;choice&quot; data-mode=&quot;insight&quot; aria-pressed=&quot;false&quot;>It sort of jumped out at me</button>
@@ -385,7 +397,7 @@
             <button class=&quot;choice&quot; data-mode=&quot;analysis&quot; aria-pressed=&quot;false&quot;>I had to really think about it</button>
           </div>
         </div>
-        <div class=&quot;q&quot;>
+        <div class=&quot;q&quot; id=&quot;qConf&quot;>
           <h3 id=&quot;confQ&quot;>How confident were you in the path you took?</h3>
           <div class=&quot;scale&quot; id=&quot;confScale&quot;>
             <span class=&quot;ends&quot;>not at all</span>
@@ -422,6 +434,26 @@
         </div>
         <div class=&quot;strip&quot; id=&quot;strip&quot;></div>
       </div>
+
+      <div class=&quot;card pairpanel&quot;>
+        <p class=&quot;eyebrow&quot;>Convergent &amp;#215; divergent</p>
+        <h3 style=&quot;font-size:18px&quot;>Why this is a pair, not one tool</h3>
+        <p style=&quot;font-size:14px;color:var(--muted)&quot;>Neither form alone operationalizes mathematical creativity as the reviews describe it. Run together, the contrast is the point.</p>
+        <div class=&quot;pairgrid&quot;>
+          <div class=&quot;paircard conv&quot;>
+            <span class=&quot;ptag&quot;>M-RAT-C &amp;middot; convergent form</span>
+            <h3>One fixed answer</h3>
+            <p>The prompt narrows to a single verifiable idea. What's measured is the <em>path</em> to it &amp;mdash; time, attempts, confidence, whether it arrived as a jump.</p>
+          </div>
+          <div class=&quot;paircard div&quot;>
+            <span class=&quot;ptag&quot;>M-RAT-D &amp;middot; divergent form</span>
+            <h3>Many open answers</h3>
+            <p>The prompt stays open. What's measured is <em>breadth</em> &amp;mdash; fluency and flexibility &amp;mdash; under a fixed time window instead of a fixed answer.</p>
+          </div>
+        </div>
+        <p style=&quot;font-size:13px;color:var(--muted)&quot;>A learner can score high on one and low on the other. That gap is evidence, not noise &amp;mdash; it's what either form alone would miss.</p>
+      </div>
+
       <div class=&quot;note&quot; id=&quot;interpNote&quot;></div>
 
       <div class=&quot;card&quot;>
@@ -648,11 +680,20 @@
         al.appendChild(row);
       });
     } else { aw.hidden=true; }
-    $(&quot;#confQ&quot;).textContent = solved ? &quot;How confident were you as you closed in?&quot; : &quot;How confident were you in the path you took?&quot;;
-    // reset controls
+    // reset selections
     Array.prototype.forEach.call(document.querySelectorAll(&quot;#modeChoices .choice&quot;),function(el){el.setAttribute(&quot;aria-pressed&quot;,&quot;false&quot;)});
     Array.prototype.forEach.call(document.querySelectorAll(&quot;#confScale .dot&quot;),function(el){el.setAttribute(&quot;aria-pressed&quot;,&quot;false&quot;)});
-    $(&quot;#continueBtn&quot;).disabled=true; $(&quot;#resHint&quot;).textContent=&quot;Rate both to continue&quot;; $(&quot;#resHint&quot;).style.display=&quot;&quot;;
+    if(solved){
+      // only a solved item has a path worth rating
+      $(&quot;#qMode&quot;).hidden=false; $(&quot;#qConf&quot;).hidden=false;
+      $(&quot;#confQ&quot;).textContent=&quot;How confident were you as you closed in?&quot;;
+      $(&quot;#continueBtn&quot;).disabled=true; $(&quot;#resHint&quot;).textContent=&quot;Rate both to continue&quot;; $(&quot;#resHint&quot;).style.display=&quot;&quot;;
+    }else{
+      // gave up and saw the answer — nothing to rate, so skip the questions
+      $(&quot;#qMode&quot;).hidden=true; $(&quot;#qConf&quot;).hidden=true;
+      pendMode=null; pendConf=null;
+      $(&quot;#continueBtn&quot;).disabled=false; $(&quot;#resHint&quot;).style.display=&quot;none&quot;;
+    }
     show(&quot;resolve&quot;);
   }
   function maybeEnable(){
